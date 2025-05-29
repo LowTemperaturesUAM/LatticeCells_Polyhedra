@@ -1,4 +1,4 @@
-function [Vertices,Faces] = wignerSeitz3D(Points,C,opts)
+function [Vertices,Faces,Vol] = wignerSeitz3D(Points,C,opts)
 arguments
     Points (:,3) double
     C (1,3) double = [0 0 0]; % center point
@@ -9,6 +9,9 @@ end
 % which vertex is in which face, used to plot with patch.
 % EXAMPLE: [Vertices,Faces] = wignerSeitz3D([0 0 1;0 1 0;1 0 0;
 % 0 0 -1;0 -1 0;-1 0 0], [0 0 0])
+
+% remove duplicates
+Points = uniquetol(Points,1e-10,"ByRows",true);
 
 % Every combination of 3 points
 combin = nchoosek(1:size(Points,1),3);
@@ -39,10 +42,22 @@ switch opts.Method
         valCond = any(sol * n' + d' >eps,2);
         sol(valCond,:) = [];
         vertexPlanes(valCond,:) = [];
-end
-Vertices = sol;
 
-Faces = facesPatch3D(Vertices);
+        Vertices = sol;
+
+    case 'voronoi' % Use Voronoi teselation from triangulation
+        % Triangulate input points
+        dt = delaunayTriangulation(Points);
+        [verts,region] = voronoiDiagram(dt);
+        % Obtain lattice point nearest to input center, in case it doeasn't match
+        tid = nearestNeighbor(dt,C(1),C(2),C(3));
+
+        % Calculate vertices of Voronoi cell around center
+        Vertices = uniquetol(verts(region{tid},:),1e-10,'ByRows',true);
+
+end
+% Compute Connectivity for faces and volume of cell
+[Faces, Vol] = facesPatch3D(Vertices);
 
 end
 

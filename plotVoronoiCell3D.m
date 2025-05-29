@@ -8,8 +8,11 @@ end
 points = uniquetol(points,1e-10,'ByRows',true);
 dt = delaunayTriangulation(points);
 [V, Reg] = voronoiDiagram(dt);
+% Obtain lattice point nearest to center
 tid = nearestNeighbor(dt,center(1),center(2),center(3));
+% Calculate vertices of voronoi cell around the center
 V_voronoi = uniquetol(V(Reg{tid},:),1e-6,'ByRows',true);
+[F_voronoi,Vol] = facesPatch3D(V_voronoi);
 
 if isempty(ax) % In case there were not axes given
     figure;
@@ -18,7 +21,7 @@ if isempty(ax) % In case there were not axes given
         'or','filled','MarkerEdgeColor','k');
 end
     hold(ax,'on')
-    P = patch(ax,'vertices',V_voronoi,'faces',facesPatch3D(V_voronoi), ...
+    P = patch(ax,'vertices',V_voronoi,'faces',F_voronoi, ...
         'faceAlpha',.2,'FaceColor',[.1 .5 .7] );
 
     daspect([1 1 1])
