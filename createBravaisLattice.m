@@ -1,18 +1,49 @@
 function [latticeData]=createBravaisLattice(bravais,params,angles)
 arguments
-    bravais string
+    bravais
     params (1,3) double {mustBePositive,mustBeFinite}
     angles (1,3) double {mustBeFinite}
 end
 
-% clean up the string
 bravaisList = {'Cubic','FCC','BCC','Tetragonal','Body Centered Tetragonal' ...
     'Orthorhombic','Face Centered Orthorhombic', ...
     'Body Centered Orthorhombic','Side Centered Orthorhombic' ...
     'Hexagonal','Rhombohedral','Monoclinic','C Centered Monoclinic', ...
     'Triclinic'};
 
-bravais = validatestring(strrep(bravais,'.',''), bravaisList);
+switch class(bravais)
+    case 'double'
+        warning('Only Lattice Systems are known (simple or primitive).')
+        if bravais > 194 && bravais <= 230
+            bravais = 'Cubic';
+        elseif bravais > 167
+            bravais = 'Hexagonal';
+        elseif bravais > 142
+            bravais = 'Rhombohedral';
+        elseif bravais > 74
+            bravais = 'Tetragonal';
+        elseif bravais > 15
+            bravais = 'Orthorhombic';
+        elseif bravais> 2
+            bravais = 'Monoclinic';
+        elseif bravais > 0
+            bravais = 'Triclinic';
+        end
+
+    case 'string'
+        % clean up the string
+        bravais = validatestring(strrep(bravais,'.',''), bravaisList);
+
+end
+
+if ~isa(bravais,'double') && ~isa(bravais,'string')
+    error("bravais is not a correct variable. Use Group No. or Full Lattice Name");
+
+elseif isa(bravais,'double')
+    
+end
+
+
 
 switch bravais
     case bravaisList(1) % cubic
@@ -95,6 +126,8 @@ switch bravais
     case bravaisList(14) % Triclinic
         warning('Not available')
         %DO%
+    otherwise
+        warning('bravaisList is not correct')
 end
 
 

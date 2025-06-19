@@ -4,7 +4,7 @@ arguments
     n
     mvs
 end
-% Replicate a set of 3D points in space n times in directions set by mvs.
+% replicateCell(oldR,n,mvs) moves a set of 3D points in space n times in directions set by mvs.
 R = [];
 % Loop in 1st direction
 for i = -n:n
