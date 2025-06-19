@@ -43,7 +43,7 @@ switch opts.Method
         sol(valCond,:) = [];
         vertexPlanes(valCond,:) = [];
 
-        Vertices = sol;
+        Vertices = uniquetol(sol,1e-10,'ByRows',true);
 
     case 'voronoi' % Use Voronoi teselation from triangulation
         % Triangulate input points
