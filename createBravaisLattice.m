@@ -8,7 +8,7 @@ end
 bravaisList = {'Cubic','FCC','BCC','Tetragonal','Body Centered Tetragonal' ...
     'Orthorhombic','Face Centered Orthorhombic', ...
     'Body Centered Orthorhombic','Side Centered Orthorhombic' ...
-    'Hexagonal','Rhombohedral','Monoclinic','C Centered Monoclinic', ...
+    'Hexagonal','Rhombohedral','Monoclinic','Side Centered Monoclinic', ...
     'Triclinic'};
 
 switch class(bravais)
@@ -19,7 +19,7 @@ switch class(bravais)
         elseif bravais > 167
             bravais = 'Hexagonal';
         elseif bravais > 142
-            bravais = 'Rhombohedral';
+            bravais = 'Trigonal';
         elseif bravais > 74
             bravais = 'Tetragonal';
         elseif bravais > 15
@@ -29,21 +29,16 @@ switch class(bravais)
         elseif bravais > 0
             bravais = 'Triclinic';
         end
+        % Check lattice type
 
     case 'string'
         % clean up the string
         bravais = validatestring(strrep(bravais,'.',''), bravaisList);
-
+    case 'char'
+    bravais = validatestring(strrep(bravais,'.',''), bravaisList);
+    otherwise
+        error("bravais is not a correct variable. Use Group No. or Full Lattice Name");
 end
-
-if ~isa(bravais,'double') && ~isa(bravais,'string')
-    error("bravais is not a correct variable. Use Group No. or Full Lattice Name");
-
-elseif isa(bravais,'double')
-    
-end
-
-
 
 switch bravais
     case bravaisList(1) % cubic
