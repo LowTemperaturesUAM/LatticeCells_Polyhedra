@@ -11,13 +11,26 @@ classdef cif
             end
         end
         % break space group symmmetry
-        function [obj,newR] = breakSymm(obj)
+        function [newT] = breakSymm(obj)
             data = obj.Data;
             newR = breakSymmCif(data);
+            % construct new table with all atoms
+            T = obj.atoms;
 
-            % construct new fields with all atoms
-            labels = data.atom_site_label;
-            % data.atom_site_x = [];
+            % Different equivalent atoms and number af all atoms
+            N = height(T);
+            nAtoms = cellfun(@(x)size(x,1), newR);
+
+            newT = table();
+            for n = 1:N
+                % Make rows with new positions
+                newPos = [repmat(T(n,1:end-3),[nAtoms(n) 1]), num2cell(newR{n})];
+                % Preserve variable names
+                newPos.Properties.VariableNames=T.Properties.VariableNames;
+
+                newT = unique([newT; T(n,:);newPos],'stable');
+            end
+            
         end
         function l = lengths(obj)
             l = [obj.Data.cell_length_a,...
