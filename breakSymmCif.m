@@ -14,17 +14,37 @@ nIons = size(cifData.atom_site_fract_x,1);
 R = [rIons.X rIons.Y rIons.Z];
 
 % get symmetry operations (strings)
-symOps = cifData.space_group_symop_operation_xyz;
+if isfield(cifData,'space_group_symop_operation_xyz')
+    symOps = cifData.space_group_symop_operation_xyz;
+elseif isfield(cifData,'symmetry_equiv_pos_as_xyz')
+    symOps = cifData.symmetry_equiv_pos_as_xyz;
+else
+    error('There is not known field with symmetry operations')
+end
 
 newR = zeros(0,3);
 % loop over all symm operations
 for i = 1:numel(symOps)
-    t = symOps{i};
-    %find(t==',')
+    t = symOps{i}; % take one operation
+    t = replace(t,' ',''); % delete empty spaces
+    sepDim = find(t==','); % get comma position to separate directions
+    sepDim = [0 sepDim length(t)+1];
+
 
     % Convert operation into affine transformation
-    % Get identity or inversion
-    refl = (1-2*[contains(t,'-x') contains(t,'-y') contains(t,'-z')]') .* eye(3);
+    refl = nan(3); % Initialize matrix
+    % obtain matrix rows for reflection
+    % Separate string into each dimension for easier parsing
+    for n = 1:3
+        subt = t(sepDim(n)+1:sepDim(n+1)-1);
+        % obtain 1 or -1 for each correspondance, this should give a matrix
+        % corresponding to the equivalent positions, outside of traslations
+        a = [contains(subt,'x')-2*contains(subt,'-x'),...
+            contains(subt,'y')-2*contains(subt,'-y'),...
+            contains(subt,'z')-2*contains(subt,'-z')];
+        refl(n,:) = a;
+    end
+    
     % Get translation
     trans = str2num(replace(t,{'x','y','z','-x','-y','-z'},'0'))';
 
@@ -41,7 +61,7 @@ end
 
 % Separate each ion into a cell
 for n = 1:nIons
-    R_ion{n} = uniquetol(newR(n:nIons:end,:),1e-10,'ByRows',true);
+    R_ion{n} = uniquetol(newR(n:nIons:end,:),1e-5,'ByRows',true);
 end
 newR = R_ion;
 end

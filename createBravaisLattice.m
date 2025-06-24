@@ -125,7 +125,6 @@ switch bravais
         warning('bravaisList is not correct')
 end
 
-
 % general set of vectors with a//x
 Rconv = [1 0 0;
     cosd(gamma),sind(gamma),0;
@@ -141,6 +140,7 @@ Fr = facesPatch3D(Pr);
 if ~exist("R",'var')
     R = Rconv;
 end
+latticeData.realLatticeVectors = R;
 % Calculate reciprocal vectors (primitive). A 2pi could be added
 Vr = dot(R(1,:),cross(R(2,:),R(3,:)));
 K = 1/Vr .* [cross(R(2,:),R(3,:));...
@@ -156,7 +156,7 @@ fullR = replicateCell(R,2,R);
 
 % Save data into struct
 latticeData = struct('Real',fullR,'realCellVertices',Pr, ...
-    'realCellFaces',Fr,'Reciprocal',fullK, ...
-    'reciprCellVertices',Pk,'reciprCellFaces',Fk);
+    'realCellFaces',Fr,'realLatticeVector',R,'Reciprocal',fullK, ...
+    'reciprCellVertices',Pk,'reciprCellFaces',Fk,'reciprLatticeVector',K);
 
 end
