@@ -1,4 +1,4 @@
-function [latticeData]=createBravaisLattice(bravais,params,angles)
+function [latticeData,params,angles]=createBravaisLattice(bravais,params,angles)
 arguments
     bravais
     params (1,3) double {mustBePositive,mustBeFinite}
@@ -37,7 +37,7 @@ switch class(bravais)
     case 'char'
     bravais = validatestring(strrep(bravais,'.',''), bravaisList);
     otherwise
-        error("bravais is not a correct variable. Use Group No. or Full Lattice Name");
+        error("1st input is not a correct Bravais lattice. Use Group No. or Full Lattice Name");
 end
 
 switch bravais
@@ -155,7 +155,7 @@ fullR = replicateCell(R,2,R);
 [Pk,Fk] = wignerSeitz3D(fullK,[ 0 0 0],'Method','voronoi');
 
 % Save data into struct
-latticeData = struct('Real',fullR,'realCellVertices',Pr, ...
+latticeData = struct('Name',bravais,'Real',fullR,'realCellVertices',Pr, ...
     'realCellFaces',Fr,'realLatticeVector',R,'Reciprocal',fullK, ...
     'reciprCellVertices',Pk,'reciprCellFaces',Fk,'reciprLatticeVector',K);
 

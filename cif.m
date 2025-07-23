@@ -1,20 +1,50 @@
 classdef cif
     properties (SetAccess = public)
         Data
-        % Lattice
+        LatticeInfo
+        lengths
+        angles
     end
     methods
         % constructor function
-        function obj = cif(path)
-            if nargin > 0
+        function obj = cif(path,lengths,angles)
+            if nargin == 1 && contains(path(end-3:end),'.cif')
+                disp('creating from cif file')
                 obj.Data = readcif(path);
+                obj.LatticeInfo = obj.lattice;
+
+                            obj.angles = [obj.Data.cell_angle_alpha,...
+                obj.Data.cell_angle_beta,...
+                obj.Data.cell_angle_gamma];
+
+                            obj.lengths = [obj.Data.cell_length_a,...
+                obj.Data.cell_length_b,...
+                obj.Data.cell_length_c];
+
+            elseif nargin > 1 % given the lattice data
+                bravais = path; % take 1st input as lattice name
+                if isempty(angles) % allocate with right angles
+                    angles = [90 90 90];
+                end
+                % create struct with lattice data
+                [latticeData,lengths,angles] = createBravaisLattice(bravais,lengths,angles);
+                if ~isempty(latticeData) 
+                    obj.LatticeInfo = latticeData;
+                    obj.lengths = lengths;
+                    obj.angles = angles;
+                else % in case it fails
+                    disp("There are no valid lattice data")
+                end
+            else
+                warning('There are no valid lattice data');
             end
         end
         % break space group symmmetry
-        function [newT,newR] = breakSymm(obj,Ncell)
+        function [newT,newR] = breakSymm(obj,Ncell,opts)
             arguments
                 obj cif
                 Ncell double = 1
+                opts.IncludeBoundary (1,1) logical = true
             end
             % [T,R] = breakSymm(obj) gives all atom positions, with no
             %  implied symmetry in cell coordinates. T is a table 
@@ -32,8 +62,15 @@ classdef cif
             % direction
             R = cellfun(@(x) replicateCell(x,max([Na,Nb,Nc]*2),eye(3)), ...
                 newR,'UniformOutput',false);
-            % Limit to N cells
-            cond = @(x) x(:,1) > Na | x(:,2) > Nb | x(:,3) > Nc | any(x<0,2);
+
+            % Limit to N cells. Include boundary (part of next cell) if
+            % indicated
+            if opts.IncludeBoundary == false
+                cond = @(x) x(:,1) > Na | x(:,2) > Nb | x(:,3) > Nc | any(x<0,2);
+            else
+                cond = @(x) x(:,1) >= Na | x(:,2) >= Nb | x(:,3) >= Nc | any(x<0,2);
+            end
+
             for n = 1:numel(R)
                 R{n}(cond(R{n}),:) = [];
             end
@@ -56,28 +93,38 @@ classdef cif
             end
             
         end
-        function l = lengths(obj)
-            % obj.lengths gives the three lattice parameters
-            l = [obj.Data.cell_length_a,...
-                obj.Data.cell_length_b,...
-                obj.Data.cell_length_c];
-        end
-        function a = angles(obj)
-            % obj.angles gives the three lattice angles between vectors a,b
-            % and c. alpha=angle(b,c), beta=angle(c,a) and gamma=angle(a,b)
-            a = [obj.Data.cell_angle_alpha,...
-                obj.Data.cell_angle_beta,...
-                obj.Data.cell_angle_gamma];
-        end
+        % function l = lengths(obj)
+        %     % obj.lengths gives the three lattice parameters
+        %     l = [obj.Data.cell_length_a,...
+        %         obj.Data.cell_length_b,...
+        %         obj.Data.cell_length_c];
+        % end
+        % function a = angles(obj)
+        %     % obj.angles gives the three lattice angles between vectors a,b
+        %     % and c. alpha=angle(b,c), beta=angle(c,a) and gamma=angle(a,b)
+        %     a = [obj.Data.cell_angle_alpha,...
+        %         obj.Data.cell_angle_beta,...
+        %         obj.Data.cell_angle_gamma];
+        % end
         function latName = bravais(obj)
             % obj.bravais gives the Bravais lattice of the cif file
             % If it contains corresp. field, take it directly
             
             % Otherwise, obtain it from space group
             % From number, obtain the crystal system
-            groupNum = obj.Data.symmetry_Int_Tables_number;
+            if isfield(obj.Data,'symmetry_Int_Tables_number')
+                groupNum = obj.Data.symmetry_Int_Tables_number;
+            elseif isfield(obj.Data,'space_group_IT_number')
+                groupNum = obj.Data.space_group_IT_number;
+            else
+                error('Group number was not found.')
+            end
             % From name first letter, get the structure (primitive, centered...)
-            letter = obj.Data.symmetry_space_group_name_H_M;
+            if isfield(obj.Data,'symmetry_space_group_name_H_M')
+                letter = obj.Data.symmetry_space_group_name_H_M;
+            elseif isfield(obj.Data,'space_group_name_H_M_alt')
+                letter = obj.Data.space_group_name_H_M_alt;
+            end
         aux = [contains(letter,"P"),...
 contains(letter,"F"),contains(letter,"I"),contains(letter,"R"),...
 contains(letter,"C")||contains(letter,"A")];
@@ -117,7 +164,8 @@ contains(letter,"C")||contains(letter,"A")];
                     end
                 case 4 % rhombohedral
                     system = 'Rhombohedral';
-                case 5 % side centered
+                otherwise % side centered
+                    name = 'Side Centered';
             end
    
             % Compose lattice full name
@@ -134,17 +182,64 @@ contains(letter,"C")||contains(letter,"A")];
                 obj.lengths, ...
                 obj.angles);
 
-            % obj.Lattice = latticeData;
+            obj.LatticeInfo = latticeData;
         end
         function table_atoms = atoms(obj)
             data = obj.Data;
             
             table_atoms = ...
 table(data.atom_site_label,data.atom_site_type_symbol, ...
-                data.atom_site_symmetry_multiplicity, ...
                 data.atom_site_fract_x,data.atom_site_fract_y,data.atom_site_fract_z, ...
-                'VariableNames',{'Label','Symbol','Multiplicity', ...
+                'VariableNames',{'Label','Symbol', ...
                 'X','Y','Z'});
+        end
+        function [cellPoly] = cellPatch(obj,rkSpace,cellType)
+            arguments
+                obj
+                rkSpace {mustBeMember(rkSpace,{'real','reciprocal'})}= 'real'
+                cellType {mustBeMember(cellType,{'conventional','primitive','brillouin'})}= 'conventional'
+            end
+            % returns a struct with vertices and faces for the cell
+
+            switch rkSpace % choose bewtween cell in r or k - space
+                case 'real'
+                    if (contains(obj.LatticeInfo.Name,'Centered')|| ...
+                            contains(obj.bravais,'Centered')) &&...
+                        contains(cellType,'conventional')
+                        verts = [0 0 0;
+                            1 1 1;
+                            perms([1 0 0]);
+                            perms([1 1 0])].*obj.lengths;
+                    elseif contains(cellType,'brillouin')
+                        verts = wignerSeitz3D(obj.LatticeInfo.Real,[0 0 0],'Output','struct');
+                        verts = verts.vertices;
+
+                    else
+                        verts = [0 0 0;
+                            1 1 1;
+                            perms([1 0 0]);
+                            perms([1 1 0])]*obj.LatticeInfo.realLatticeVector;
+                    end
+                case 'reciprocal'
+                    if contains(cellType,'primitive')
+                    verts = [0 0 0;
+                            1 1 1;
+                            perms([1 0 0]);
+                            perms([1 1 0])]*obj.LatticeInfo.reciprLatticeVector;
+                    elseif contains(cellType,'conventional')
+                        verts = [0 0 0;
+                            1 1 1;
+                            perms([1 0 0]);
+                            perms([1 1 0])]./obj.lengths;
+                    elseif contains(cellType,'brillouin')
+                        verts = obj.LatticeInfo.reciprCellVertices;
+                    end
+            end
+            verts = uniquetol(verts,1e-7,'ByRows',true);
+            faces = facesPatch3D(verts);
+            % Save in a struct. Easier to write patch function
+            cellPoly = struct('vertices',verts,'faces',faces, ...
+                'FaceColor','none');
         end
     end
 

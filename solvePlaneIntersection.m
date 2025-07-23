@@ -35,5 +35,8 @@ if opts.InteriorPoints
 end
 % Remove duplicates
 Points = uniquetol(sol,1e-10,'ByRows',true);
-
+% if there are no intersection points (empty array) use a nan value
+if isempty(Points)
+    Points = nan(1,3);
+end
 end

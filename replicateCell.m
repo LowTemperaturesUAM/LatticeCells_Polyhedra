@@ -8,16 +8,16 @@ end
 R = [];
 % Loop in 1st direction
 for i = -n:n
-    R = uniquetol([R; oldR + i*mvs(3,:)],1e-10,'ByRows',true);
+    R = uniquetol([R; oldR + i*mvs(3,:)],1e-6,'ByRows',true);
 end
 % 
 Rold = R;
 for i = -n:n
-    R = uniquetol([R; Rold + i*mvs(2,:)],1e-10,'ByRows',true);
+    R = uniquetol([R; Rold + i*mvs(2,:)],1e-6,'ByRows',true);
 end
 Rold=R;
 for i = -n:n
-    R = uniquetol([R; Rold + i*mvs(1,:)],1e-10,'ByRows',true);
+    R = uniquetol([R; Rold + i*mvs(1,:)],1e-6,'ByRows',true);
 end
 
 end
