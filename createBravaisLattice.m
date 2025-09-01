@@ -5,11 +5,27 @@ arguments
     angles (1,3) double {mustBeFinite}
 end
 
-bravaisList = {'Cubic','FCC','BCC','Tetragonal','Body Centered Tetragonal' ...
+bravaisLongList = {'Cubic','FCC','BCC','Tetragonal','Body Centered Tetragonal' ...
     'Orthorhombic','Face Centered Orthorhombic', ...
     'Body Centered Orthorhombic','Side Centered Orthorhombic' ...
     'Hexagonal','Rhombohedral','Monoclinic','Side Centered Monoclinic', ...
     'Triclinic'};
+bravaisList = bravaisLongList; % default value
+
+bravaisShortList = {'cP'
+'cF'
+'cI'
+'tP'
+'tI'
+'oP'
+'oF'
+'oI'
+'oS'
+'hP'
+'hR'
+'mP'
+'mS'
+'aP'}';
 
 switch class(bravais)
     case 'double'
@@ -30,11 +46,17 @@ switch class(bravais)
             bravais = 'Triclinic';
         end
         % Check lattice type
-
+% clean string. Consider input as abreviations (2 chars)
     case 'string'
         % clean up the string
+        if length(char(bravais)) < 3
+            bravaisList = bravaisShortList;
+        end
         bravais = validatestring(strrep(bravais,'.',''), bravaisList);
     case 'char'
+        if length(bravais) < 3
+            bravaisList = bravaisShortList;
+        end
     bravais = validatestring(strrep(bravais,'.',''), bravaisList);
     otherwise
         error("1st input is not a correct Bravais lattice. Use Group No. or Full Lattice Name");
@@ -105,6 +127,7 @@ switch bravais
         %DO%
     case bravaisList(11) % Rombohedral
         [beta,gamma] = deal(angles(1));
+        [params(2:3)] = deal(params(1));
         warning('Not available')
         %DO%
 
@@ -125,7 +148,21 @@ switch bravais
         warning('bravaisList is not correct')
 end
 
+% useful ID for bravais lattice name
+bravaisID = contains(bravaisList,bravais);
+LongName = bravaisLongList(bravaisID);
+
 % general set of vectors with a//x
+if ~exist('alpha','var')
+    alpha = angles(1);
+end
+if ~exist('beta','var')
+    beta = angles(2);
+end
+if ~exist('gamma','var')
+    gamma = angles(3);
+end
+
 Rconv = [1 0 0;
     cosd(gamma),sind(gamma),0;
     cosd(beta), 1/sind(gamma)*(cosd(alpha)-cosd(beta)*cosd(gamma)),...
@@ -155,7 +192,7 @@ fullR = replicateCell(R,2,R);
 [Pk,Fk] = wignerSeitz3D(fullK,[ 0 0 0],'Method','voronoi');
 
 % Save data into struct
-latticeData = struct('Name',bravais,'Real',fullR,'realCellVertices',Pr, ...
+latticeData = struct('Name',LongName,'Real',fullR,'realCellVertices',Pr, ...
     'realCellFaces',Fr,'realLatticeVector',R,'Reciprocal',fullK, ...
     'reciprCellVertices',Pk,'reciprCellFaces',Fk,'reciprLatticeVector',K);
 

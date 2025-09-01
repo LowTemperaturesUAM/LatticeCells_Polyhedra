@@ -11,15 +11,17 @@ classdef cif
             if nargin == 1 && contains(path(end-3:end),'.cif')
                 disp('creating from cif file')
                 obj.Data = readcif(path);
-                obj.LatticeInfo = obj.lattice;
 
-                            obj.angles = [obj.Data.cell_angle_alpha,...
-                obj.Data.cell_angle_beta,...
-                obj.Data.cell_angle_gamma];
+                obj.angles = [obj.Data.cell_angle_alpha,...
+                    obj.Data.cell_angle_beta,...
+                    obj.Data.cell_angle_gamma];
 
-                            obj.lengths = [obj.Data.cell_length_a,...
-                obj.Data.cell_length_b,...
-                obj.Data.cell_length_c];
+                obj.lengths = [obj.Data.cell_length_a,...
+                    obj.Data.cell_length_b,...
+                    obj.Data.cell_length_c];
+
+                obj.LatticeInfo = createBravaisLattice(obj.bravais, ...
+                    obj.lengths,obj.angles);
 
             elseif nargin > 1 % given the lattice data
                 bravais = path; % take 1st input as lattice name
@@ -176,14 +178,7 @@ contains(letter,"C")||contains(letter,"A")];
             end
 
         end
-        function latticeData = lattice(obj)
-            
-            latticeData = createBravaisLattice(obj.bravais, ...
-                obj.lengths, ...
-                obj.angles);
 
-            obj.LatticeInfo = latticeData;
-        end
         function table_atoms = atoms(obj)
             data = obj.Data;
             
