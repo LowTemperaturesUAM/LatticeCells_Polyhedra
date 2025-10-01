@@ -2,7 +2,7 @@ function [latticeData,params,angles]=createBravaisLattice(bravais,params,angles)
 arguments
     bravais
     params (1,3) double {mustBePositive,mustBeFinite}
-    angles (1,3) double {mustBeFinite}
+    angles (1,3) double {mustBeFinite} = [90 90 90]
 end
 
 bravaisLongList = {'Cubic','FCC','BCC','Tetragonal','Body Centered Tetragonal' ...
@@ -140,7 +140,11 @@ switch bravais
         %DO%
     case bravaisList(13) % Side Centered Monoclinic
         warning('Not available')
+         [beta,gamma] = deal(90);
         %DO%
+        % I need to get primitive vectors for a side centered lattice
+        %R = [1 -1 0; 1 1 0; 0 0 2]/2.*params;
+
     case bravaisList(14) % Triclinic
         warning('Not available')
         %DO%
@@ -162,7 +166,7 @@ end
 if ~exist('gamma','var')
     gamma = angles(3);
 end
-
+% Conventional axes
 Rconv = [1 0 0;
     cosd(gamma),sind(gamma),0;
     cosd(beta), 1/sind(gamma)*(cosd(alpha)-cosd(beta)*cosd(gamma)),...

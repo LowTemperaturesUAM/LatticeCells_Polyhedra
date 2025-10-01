@@ -68,9 +68,10 @@ classdef cif
             % Limit to N cells. Include boundary (part of next cell) if
             % indicated
             if opts.IncludeBoundary == false
-                cond = @(x) x(:,1) > Na | x(:,2) > Nb | x(:,3) > Nc | any(x<0,2);
-            else
                 cond = @(x) x(:,1) >= Na | x(:,2) >= Nb | x(:,3) >= Nc | any(x<0,2);
+            else
+                % [Na,Nb,Nc] = struct('x',num2cell(Ncell+1)).x;
+                cond = @(x) x(:,1) > Na | x(:,2) > Nb | x(:,3) > Nc | any(x<0,2);
             end
 
             for n = 1:numel(R)
@@ -95,19 +96,7 @@ classdef cif
             end
             
         end
-        % function l = lengths(obj)
-        %     % obj.lengths gives the three lattice parameters
-        %     l = [obj.Data.cell_length_a,...
-        %         obj.Data.cell_length_b,...
-        %         obj.Data.cell_length_c];
-        % end
-        % function a = angles(obj)
-        %     % obj.angles gives the three lattice angles between vectors a,b
-        %     % and c. alpha=angle(b,c), beta=angle(c,a) and gamma=angle(a,b)
-        %     a = [obj.Data.cell_angle_alpha,...
-        %         obj.Data.cell_angle_beta,...
-        %         obj.Data.cell_angle_gamma];
-        % end
+
         function latName = bravais(obj)
             % obj.bravais gives the Bravais lattice of the cif file
             % If it contains corresp. field, take it directly
@@ -206,7 +195,8 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
                             perms([1 0 0]);
                             perms([1 1 0])].*obj.lengths;
                     elseif contains(cellType,'brillouin')
-                        verts = wignerSeitz3D(obj.LatticeInfo.Real,[0 0 0],'Output','struct');
+                        verts = wignerSeitz3D(obj.LatticeInfo.Real,[0 0 0], ...
+                            'Output','struct','Method','voronoi');
                         verts = verts.vertices;
 
                     else
@@ -226,6 +216,8 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
                             1 1 1;
                             perms([1 0 0]);
                             perms([1 1 0])]./obj.lengths;
+                        % move cell to center it in 0, as Brillouin cell
+                        verts = verts - .5./obj.lengths;
                     elseif contains(cellType,'brillouin')
                         verts = obj.LatticeInfo.reciprCellVertices;
                     end
