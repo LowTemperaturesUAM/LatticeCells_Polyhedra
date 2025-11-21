@@ -77,10 +77,13 @@ for nCenter = 1:size(center,1)
 
 end
     if contains(opts.Output,'struct')
+        C = tab10(nCenter);
         for n = 1:nCenter
             outStruct(n).vertices = Vertices{n};
             outStruct(n).faces = Faces{n};
-            outStruct(n).facecolor = 'none';
+            outStruct(n).faceColor = 'none'; % assign different colors
+
+            outStruct(n).UserData.rAtom = center(n,:);% save the atom position
         end
         % Replace first output by struct, and the second by the volumes
         Vertices = outStruct;

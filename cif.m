@@ -25,7 +25,7 @@ classdef cif
 
             elseif nargin > 1 % given the lattice data
                 bravais = path; % take 1st input as lattice name
-                if isempty(angles) % allocate with right angles
+                if nargin <3 || isempty(angles) % allocate with right angles
                     angles = [90 90 90];
                 end
                 % create struct with lattice data
@@ -47,6 +47,7 @@ classdef cif
                 obj cif
                 Ncell double = 1
                 opts.IncludeBoundary (1,1) logical = true
+                opts.NormalizedPosition (1,1) logical = false
             end
             % [T,R] = breakSymm(obj) gives all atom positions, with no
             %  implied symmetry in cell coordinates. T is a table 
@@ -76,6 +77,18 @@ classdef cif
 
             for n = 1:numel(R)
                 R{n}(cond(R{n}),:) = [];
+            end
+            % Return coordinates normalized to latt. parameters and in the
+            % system basis.
+            if opts.NormalizedPosition
+                % R = cellfun(@(x) x./obj.lengths,R,'UniformOutput',false);
+            else
+                % Change basis to express correctly their positions
+                B = obj.LatticeInfo.realLatticeVector;
+                B = latticeVectors(obj,"real",'conventional');
+                % convert to cartesian coordinates
+                R = cellfun(@(x) x*B, R,'UniformOutput',false);
+                warning('Correct code before proceeding')
             end
             newR = R;
 
@@ -107,6 +120,10 @@ classdef cif
                 groupNum = obj.Data.symmetry_Int_Tables_number;
             elseif isfield(obj.Data,'space_group_IT_number')
                 groupNum = obj.Data.space_group_IT_number;
+            elseif isfield(obj.LatticeInfo,'Name') % use given name
+                system = 'Triclinic';
+                letter = [''];
+                groupNum = nan;
             else
                 error('Group number was not found.')
             end
@@ -118,7 +135,7 @@ classdef cif
             end
         aux = [contains(letter,"P"),...
 contains(letter,"F"),contains(letter,"I"),contains(letter,"R"),...
-contains(letter,"C")||contains(letter,"A")];
+contains(letter,"C")||contains(letter,"A"), isempty(letter)];
 
 
             if groupNum > 194 && groupNum <= 230
@@ -155,13 +172,18 @@ contains(letter,"C")||contains(letter,"A")];
                     end
                 case 4 % rhombohedral
                     system = 'Rhombohedral';
-                otherwise % side centered
+                case 5 % side centered
                     name = 'Side Centered';
+                otherwise
+                    name = '';
+                    warning('No Group number found.')
             end
    
             % Compose lattice full name
             if isempty(name)
                 latName = system;
+            elseif contains(['BCC','FCC'],name)
+                latName = name;
             else
                 latName = [name ' ' system];
             end
@@ -227,6 +249,49 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
             % Save in a struct. Easier to write patch function
             cellPoly = struct('vertices',verts,'faces',faces, ...
                 'FaceColor','none');
+        end
+        function [vLattice] = latticeVectors(obj,rkSpace,cellType)
+            arguments
+                obj
+                rkSpace {mustBeMember(rkSpace,{'real','reciprocal'})}= 'real'
+                cellType {mustBeMember(cellType,{'conventional','primitive'})}= 'conventional'
+            end
+            switch rkSpace
+                case 'real'
+                    if (contains(obj.LatticeInfo.Name,'Centered')|| ...
+                            contains(obj.bravais,'Centered')) &&...
+                            contains(cellType,'conventional')
+                        vLattice = eye(3).*obj.lengths;
+                    else
+                        vLattice = eye(3)*obj.LatticeInfo.realLatticeVector;
+                    end
+                case 'reciprocal'
+                    if contains(cellType,'primitive')
+                        vLattice = eye(3)*obj.LatticeInfo.reciprLatticeVector;
+                    elseif contains(cellType,'conventional')
+                        vLattice = eye(3)./obj.lengths;
+                    end
+            end
+        end
+        function [n] = normal(obj,hkl)
+            % n = normal(obj,hkl) translates the Miller indices into the
+            % normal vector of the coresponding crystal. plane
+            n = hkl;
+            LatR = obj.LatticeInfo.realLatticeVector;
+            v = [];
+            if any(n==0)
+                for i = find(n==0)
+                    v(end+1,:) = LatR(i,:);
+                end
+            end
+            idx = setdiff(1:3,find(n==0));
+            i=0;
+            while size(v,1)<2
+                i = i+1;
+                v(end+1,:) = diff(n(idx(i:i+1))'.* LatR(idx(i:i+1),:),1);
+            end
+            n = cross(v(1,:),v(2,:));
+            n = n./vecnorm(n);
         end
     end
 

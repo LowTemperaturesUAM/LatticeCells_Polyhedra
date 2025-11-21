@@ -7,7 +7,7 @@ function cifData = readcif(path)
 % (https://www.mathworks.com/matlabcentral/fileexchange/43266-class-handling-cif-formatted-files),
 %  MATLAB Central File Exchange
 
-% use function to load .cif as atrut array
+% use function to load .cif as a strut array
 cifT = importcif([],path);
 
 cifData = struct();
