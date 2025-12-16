@@ -27,13 +27,12 @@ end
 for nCenter = 1:size(center,1)
     ctr = center(nCenter,:);
 
-    % Every combination of 3 points
-    combin = nchoosek(1:size(Points,1),3);
-
     switch opts.Method
         case 'planeIntersection'
             sol = [];
             vertexPlanes = [];
+            % Every combination of 3 points
+            combin = nchoosek(1:size(Points,1),3);
             % Calculate every coefficient for the plane equation: n(x-m) = 0
             n = Points-ctr; % Normal vector
             m = (Points+ctr)/2; % Midpoint

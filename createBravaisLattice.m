@@ -153,8 +153,14 @@ switch bravais
 end
 
 % useful ID for bravais lattice name
-bravaisID = contains(bravaisList,bravais);
-LongName = bravaisLongList(bravaisID);
+% No longer used (?)
+% bravaisID = contains(bravaisList,bravais);
+% LongName = bravaisLongList(bravaisID);
+if length(bravais) < 3
+    LongName = bravaisLongList(contains(bravaisShortList,bravais));
+else
+    LongName = bravais;
+end
 
 % general set of vectors with a//x
 if ~exist('alpha','var')

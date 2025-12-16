@@ -273,11 +273,16 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
                     end
             end
         end
-        function [n] = normal(obj,hkl)
+        function [n] = normal(obj,hkl,cellType)
+            arguments
+                obj
+                hkl
+                cellType = 'conventional'
+            end
             % n = normal(obj,hkl) translates the Miller indices into the
             % normal vector of the coresponding crystal. plane
             n = hkl;
-            LatR = obj.LatticeInfo.realLatticeVector;
+            LatR = latticeVectors(obj,"real",cellType);
             v = [];
             if any(n==0)
                 for i = find(n==0)
