@@ -34,15 +34,14 @@ LatR = latticeVectors(crystal,"real","conventional");
 
 % Load 1st cell
 [~,R0] = breakSymm(crystal,1,'IncludeBoundary',true,'NormalizedPosition',false);
-% R0 = cellfun(@(x) x.*crystal.lengths, R0,'UniformOutput',false);
 % Decide atoms I want to paint
 Rpaint = R0;
-
+Rpaint = cellfun(@(x) x.*[1 -1 -1]+sum(LatR),R0,'UniformOutput',false);
+R0=Rpaint;
 % ALL atoms, for Voronoi. Use 3 cells to each side
-% Rall = cellfun(@(x) replicateCell(x,1,eye(3).*crystal.lengths),R0, ...
-%     'UniformOutput',false);
 Rall = cellfun(@(x) replicateCell(x,1,LatR),R0, ...
     'UniformOutput',false);
+
 % Define Cut plane
 pp = planeModel([n d]);
 
@@ -53,21 +52,16 @@ for i = 1:numel(R0) % assign colors to the atoms
     tempColor = repmat({C(i,:)},size(Fpoly{i}));
     [Fpoly{i}.faceColor] = tempColor{:};
 end
-% clearvars temp
+
 Fpoly = [Fpoly{:}];
-% Replicate polyhedra around------------------------
-% mvts = [0 0 0; ...
-%     hkl;...
-%     0 1 0;...
-%     1 0 0;...
-% ]*LatR;
+% Replicate polyhedra around using mvId as indices ----------------------
 mvts = mvId*LatR;
 % Repeat calculated polyhedra
 newFPoly = replicatePolyhedron(Fpoly,mvts);
 
 % save volumes of full polyhedra.....
 [~,vols] = cellfun(@(x) facesPatch3D(x),{Fpoly.vertices},'UniformOutput',false);
-[fullVols,idFull] = uniquetol([vols{:}],1e-7);
+[fullVols,idFull] = uniquetol([vols{:}],1e-3);
 % reshape idFull
 idFull = cellfun(@(x)all(x==C,2)', ...
     num2cell(vertcat(Fpoly(idFull).faceColor),2),'UniformOutput',false);
@@ -78,12 +72,17 @@ idFull = idFull(tempOrder,:);
 fullVols = fullVols(tempOrder);
 clearvars tempOrder idFull
 
-% calculate cut polyhedra
+% calculate cut polyhedra-----------------------------------------------
+% Obtain planes for every polyhedron face and add the defined cutPlane
 planes = arrayfun(@(x) [planesInPatch(x.vertices); ...
     pp.Parameters],newFPoly,'UniformOutput',false);
+% Resolve intersection of planes for new vertices
 points = cellfun(@(x) solvePlaneIntersection(x), planes,'UniformOutput',false);
+
+% Create polyhedron from its vertices. Save faces and volumes
 [ff,vols] = cellfun(@(x) facesPatch3D(x),points,'UniformOutput',false);
-volsUniq = uniquetol([vols{:}],1e-10); % save eunique values, for testing
+
+volsUniq = uniquetol([vols{:}],1e-10); % save unique values, for testing
 vols = [vols{:}]';
 % construct a struct with cut polyhedra
 Spoly = newFPoly; % initialize with same fields
@@ -132,7 +131,11 @@ cutVols(any(isFull,2),:) = [];
 idPolyAtomCut(any(isFull,2),:) = [];
 
 % Substract to obtain the upper volume
+try
 upCutVols = abs(cutVols - idPolyAtomCut*fullVols');
+catch
+    upCutVols = cutVols*0;
+end
 
 % show the different volumes to choose how to add them
 disp(["Void Vols: ",round(voidVols',4)])
@@ -206,7 +209,7 @@ axis tight;
 %SAVE INFO AS OUTPUT
 % whos;
 testInfo.unitPolyhedra = Fpoly;
-testInfo.cleavePolyhedra = Spoly;
+testInfo.cleavePolyhedra = removeNaNPolyhedra(Spoly);
 testInfo.voidPolyhedraID = idVoid;
 testInfo.fullVolume = fullVols;
 testInfo.excessVolume = upCutVols;
@@ -214,4 +217,12 @@ testInfo.voidVolume = voidVols;
 testInfo.ogCM = ogCM;
 testInfo.movedCM = mvdCM;
 %--------------------------------------------------------------------------
+    function poly = removeNaNPolyhedra(poly)
+        % removeNaNPolyhedra(poly) will remove those entries in the struct
+        % that have NaN values in faces
+
+        poly(cellfun(@(x) all(isnan(x),"all"), ...
+            {poly.faces})) = [];
+
+    end
 end
