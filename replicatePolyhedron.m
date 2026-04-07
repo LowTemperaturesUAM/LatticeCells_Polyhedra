@@ -25,8 +25,28 @@ for iMv = 1:size(mvts,1)
             tempPoly(iPoly).UserData.rAtom = mvdAtoms{iPoly};
         end
     end
+    
+
 
     newPoly = [newPoly, tempPoly];
 end
+
+%this here kills all the duplicate atoms that may appear as you replicate
+%the polyhedra
+if isfield(newPoly(1),"UserData") && isfield(newPoly(1).UserData,"rAtom")
+    nPoly = length(newPoly);
+
+    % Collect one representative atom per polyhedron
+    atomPos = zeros(nPoly, size(newPoly(1).UserData.rAtom,2));
+ 
+    for i = 1:nPoly
+        atomPos(i,:) = newPoly(i).UserData.rAtom(1,:); 
+    end
+    % Find unique rows
+    [~, idxUnique] = unique(atomPos, 'rows', 'stable');
+   
+    % Keep only unique polyhedra
+    newPoly = newPoly(idxUnique);
 % newPoly = deleteDuplicatePoly(newPoly);
+end
 end

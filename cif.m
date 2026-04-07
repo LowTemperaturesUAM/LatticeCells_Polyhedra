@@ -6,8 +6,12 @@ classdef cif
         angles
     end
     methods
+
+        %Funcion principal, devuelve vector crystal con toda la info
         % constructor function
         function obj = cif(path,lengths,angles)
+
+            %If it detects a .cif file 
             if nargin == 1 && contains(path(end-3:end),'.cif')
                 disp('creating from cif file')
                 obj.Data = readcif(path);
@@ -41,6 +45,9 @@ classdef cif
                 warning('There are no valid lattice data');
             end
         end
+
+
+
         % break space group symmmetry
         function [newT,newR] = breakSymm(obj,Ncell,opts)
             arguments
@@ -124,6 +131,7 @@ classdef cif
                 system = 'Triclinic';
                 letter = [''];
                 groupNum = nan;
+                lelo
             else
                 error('Group number was not found.')
             end
@@ -285,8 +293,10 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
             LatR = latticeVectors(obj,"real",cellType);
             v = [];
             if any(n==0)
+                
                 for i = find(n==0)
-                    v(end+1,:) = LatR(i,:);
+                    i
+                    v(end+1,:) = LatR(i,:)
                 end
             end
             idx = setdiff(1:3,find(n==0));
