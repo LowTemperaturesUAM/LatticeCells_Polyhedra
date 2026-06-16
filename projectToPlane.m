@@ -1,21 +1,32 @@
-function [newP_3D,newP_2D] = projectToPlane(points,n,d)
+function [newP3D,newP2D] = projectToPlane(points3D,normal,offset)
 arguments
-    points 
-    n (1,3)
-    d (1,1) = 0
+    points3D (:,3) double
+    normal (1,3) double
+    offset (1,1) double = 0
 end
-% Projects 3D points into a plane. It gives the coordinates of the
-% projected points in the original 3D coordinates and in a 2D coordinates
-% of plane (to be finished)
+%  [newP3D,newP2D] = projectToPlane(points3D,n) projects 3D points 
+%  into a plane perpendicular to n through the origin. It gives the 
+%  coordinates of the projected points in the original 3D coordinates and 
+% in 2D coordinates of plane. Optional argument offset allows to place the plane
+% somewhere else.
 
-% Projection operator
-P = n'*n/vecnorm(n).^2;
-P = eye(3)-P;
+% Normalize vector
+nNorm = normal/vecnorm(normal);
 
-% Project
-vProj = points*P + d;
-vProj = uniquetol(vProj,1e-8,'ByRows',true); % remove duplicates
+% Projection operator (to plane through 0)
+P = eye(3)-nNorm'*nNorm;
 
-newP_3D = vProj;
+% Project coordinates
+vProj = points3D*P + offset;
+vProj = uniquetol(vProj,1e-5,'ByRows',true); % remove duplicates
+
+newP3D = vProj;
+
+%Turn to 2D plane coordinates
+v1 = vProj(3,:) - vProj(2,:); % Choose in-plane vector
+v1 = v1/norm(v1); % normalize
+v2 = cross(nNorm,v1); % Use in-plane vector, perpendicular to normal and v1
+
+newP2D = newP3D * [v1;v2]'; % Change coordinates
 
 end
