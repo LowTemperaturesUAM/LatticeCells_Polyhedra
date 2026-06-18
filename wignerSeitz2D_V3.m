@@ -1,13 +1,11 @@
-function [P] = wignerSeitz2D_V3(Bragg,center,opts)
+function [P,Area] = wignerSeitz2D_V3(Bragg,center,opts)
 arguments
     Bragg (:,2) double
-    center (:,2) double = [0 0];
+    center (:,2) double = [0 0] % center point
     opts.Method {mustBeMember(opts.Method,{'voronoi','Intersection'})} = 'voronoi'
     opts.Output {mustBeMember(opts.Output,{'struct','verticesSorted'})} = 'verticesSorted'
-
 end
-
-% Given a set of 2D Bragg peaks, wignerSeitz2D:V3(Bragg,center) calculates
+% Given a set of 2D Bragg peaks, wignerSeitz2D_V3(Bragg,center) calculates
 %  the vertices of a WignerSeitz (Brillouin in reciprocal space) cell around 
 % center (or the origin if none is given), i.e. the area enclosed by these 
 % Bragg peaks whose points lie closer to the origin than to any of the peaks.
@@ -18,83 +16,78 @@ end
 % 'Method' = 'voronoi','Intersection' determines algorithm. By default, set
 % to 'voronoi'
 % 'Output' = 'verticesSorted','struct' determines type of output variable.
-% By default, it is 'vertocesSorted', where a matrix (cell if more than 1
+% By default, it is 'verticesSorted', where a matrix (cell if more than 1
 % center) is given. 'Struct' would offer a struct, so that patch(P) already
 % plots the Wigner-Seitz cell.
 
-%Example: BrillouinPeaks = wignerSeitz_V3([0 1;1 0]).
+%Example: BrillouinPeaks = wignerSeitz2D_V3([0 1;1 0]).
+
+% Zero = mean(Bragg,1); %Center of polygon as center of mass
+% Bragg = Bragg - Zero;
+
+for nCenter = 1:size(center,1)
+    ctr = center(nCenter,:);
+
+    % Sort peaks by angle
+    a = atan2d(Bragg(:,2),Bragg(:,1));
+    [~,idx] = sort(a);
+    Bragg = Bragg(idx,:);
 
 switch opts.Method
-    case 'Intersection' % Linear system -------------------------
-        Zero = mean(Bragg,1); %Center of polygon as center of mass
-        Bragg = Bragg - Zero;
-        % Npeaks = size(Bragg,1);
-
-        % Sort peaks by angle
-        a = atan2d(Bragg(:,2),Bragg(:,1));
-        [~,idx] = sort(a);
-        Bragg = Bragg(idx,:);
+    case 'Intersection'
+        Bragg = Bragg - ctr; % move points around zero
 
         normBragg = 0.5*vecnorm(Bragg,2,2).^2;
         % Number of peaks
         numPeaks = numel(normBragg);
 
         % Solve linear system for every adjacent pair of peaks
-        P = zeros(size(Bragg));
-        for i = 1:numPeaks
-            j = mod(i,numPeaks)+1;
+        Pn = zeros(size(Bragg));
+    for i = 1:numPeaks
+        j = mod(i,numPeaks)+1;
+    
+        b = [normBragg(i); normBragg(j)];
+        A = [Bragg(i,1), Bragg(i,2);
+            Bragg(j,1), Bragg(j,2)];
+    
+        Pn(i,:) = (A\b).';
+    end
+P{nCenter} = Pn + ctr; % return polygon to original position
 
-            b = [normBragg(i); normBragg(j)];
-            A = [Bragg(i,1), Bragg(i,2);
-                Bragg(j,1), Bragg(j,2)];
-
-            P(i,:) = (A\b).';
-        end
-        % Return polygon to original position
-        P = P + Zero;
-
-    case 'voronoi' % Voronoi teselation--------------------------------
-        % Initialize variables
-        P = cell(size(center,1),1);
-
-        % get output for every center provided
-        for nCenter = 1:size(center,1)
-            ctr = center(nCenter,:);
-
-            % Triangulate input points
+    case 'voronoi'
+        % Triangulate input points
             dt = delaunayTriangulation(Bragg);
             [verts,region] = voronoiDiagram(dt);
-
             % Obtain lattice point nearest to input center, in case it doeasn't match
             tid = nearestNeighbor(dt,ctr(1),ctr(2));
 
             % Calculate vertices of Voronoi cell around center
-            tempVertices = ...
-                uniquetol(verts(region{tid},:),1e-10,'ByRows',true);
-
-            %Sort vertices by angle, so that connectivity is index vector
-            a = atan2d(tempVertices(:,2),tempVertices(:,1));
+            P{nCenter} = uniquetol(verts(region{tid},:),1e-10,'ByRows',true);
+            % Sort vertices by angle in 2D
+            a = atan2d(P{nCenter}(:,2),P{nCenter}(:,1));
             [~,idx] = sort(a);
-            tempVertices = tempVertices(idx,:);
+            P{nCenter} = P{nCenter}(idx,:);
+end
+% Compute cell area defined by P
+    [~,Area(nCenter)] = convexHull(delaunayTriangulation(P{nCenter}));
+end
 
-            P{nCenter} = tempVertices;
-        end
+if contains(opts.Output,'struct')
+    C = tab10(nCenter);
+    for n = 1:nCenter
+        outStruct(n).vertices = P{n};
+        outStruct(n).faces = 1:size(P{n},1); % face connectivity after sorting
+        outStruct(n).faceColor = 'none'; % assign different colors
 
-        if contains(opts.Output,'struct')
-            % C = tab10(nCenter);
-            for n = 1:nCenter
-                outStruct(n).vertices = P{n};
-                outStruct(n).faces = 1:length(P{n});
-                outStruct(n).faceColor = 'none'; % assign different colors
-            end
-            % Replace first output by struct
-            P = outStruct;
-        end
+        outStruct(n).UserData.Area = Area(n);% save the cell area
+    end
+    % Replace first output by struct
+    P = outStruct;
 
-        % if there is only 1 center, use matrix instead of cells
-        if nCenter == 1
-            P = cell2mat(P);
-        end
+% simplify result if only 1 center
+elseif nCenter == 1
+    P = P{1};
 
 end
+
 end
