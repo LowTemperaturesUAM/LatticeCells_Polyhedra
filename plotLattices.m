@@ -1,8 +1,9 @@
-function plotLattices(latticeData,axReal,axRecip)
+function plotLattices(latticeData,axReal,axRecip,RealNormalization)
 arguments
     latticeData
     axReal
     axRecip
+    RealNormalization
 end
 
 % Given a struct with lattice data and 2 axes, plots Real and reciprocal
@@ -39,9 +40,12 @@ patch(axReal,'Vertices',Pr,'faces',Fr,'FaceColor','none','Linewidth',2)
 % xlim(axReal,[-0.5 1.5].*max(Pr(:,1)))
 % ylim(axReal,[-.5 1.5].*max(Pr(:,2)))
 % zlim(axReal,[-.5 1.5].*max(Pr(:,3)))
+
+%Esto ha sido alterado porque pensamos que está bien, en caso contrario
+%dejar solo el vectorR en cada caso.
 xlim(axReal,[-1 2].*max([vectorR(:,1);abs(Pr(:,1))]))
-ylim(axReal,[-1 2].*max(vectorR(:,2)))
-zlim(axReal,[-0 2].*max(vectorR(:,3)))
+ylim(axReal,[-1 2].*max([vectorR(:,2);abs(Pr(:,2))]))
+zlim(axReal,[-0 2].*max([vectorR(:,3);abs(Pr(:,3))]))
 % view(axReal,[110 10])
 xlabel(axReal,'X')
 ylabel(axReal,'Y')
