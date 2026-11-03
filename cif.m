@@ -8,7 +8,7 @@ classdef cif
     methods
         % constructor function
         function obj = cif(path,lengths,angles)
-            if nargin == 1 && contains(path(end-3:end),'.cif')
+            if nargin == 1 && ischar(path) && contains(path(end-3:end),'.cif')
                 disp('creating from cif file')
                 obj.Data = readcif(path);
 
@@ -23,13 +23,37 @@ classdef cif
                 obj.LatticeInfo = createBravaisLattice(obj.bravais, ...
                     obj.lengths,obj.angles);
 
-            elseif nargin > 1 % given the lattice data
-                bravais = path; % take 1st input as lattice name
-                if nargin <3 || isempty(angles) % allocate with right angles
-                    angles = [90 90 90];
+                % given the struct with crystal data
+            elseif nargin==1 && isstruct(path) && all(...
+                isfield( path, {'Real','Reciprocal','realCellVertices'} ))
+                obj.LatticeInfo = path;
+                % reference vectors for lengths and angles, defined by cell
+                vecR =  path.realCellVertices(2:4,:);
+
+                obj.lengths = vecnorm(vecR,2,2)';
+
+                vecR_unit = vecR./obj.lengths';
+                % get angles for all permutations
+                angles = acosd(vecR_unit * vecR_unit');
+                % get only angles between 2-3, 1-3, 1-2
+                obj.angles = angles([6 3 2]);
+
+            elseif nargin > 1% given the lattice parameters
+                if ischar(path)
+                    bravais = path; % take 1st input as lattice name
+                    if nargin <3 || isempty(angles) % allocate with right angles
+                        angles = [90 90 90];
+                    end
+                    % create struct with lattice data
+                    [latticeData,lengths,angles] = createBravaisLattice(bravais,lengths,angles);
+                
+                % elseif isstruct(path) && all(...
+                %         isfield( path, {'Real','Reciprocal','realCellVertices'} ))
+                %     latticeData = path;
+                %     if nargin < 3 || isempty(angles) % allocate with right angles
+                %         angles = [90 90 90];
+                %     end
                 end
-                % create struct with lattice data
-                [latticeData,lengths,angles] = createBravaisLattice(bravais,lengths,angles);
                 if ~isempty(latticeData) 
                     obj.LatticeInfo = latticeData;
                     obj.lengths = lengths;
@@ -121,9 +145,11 @@ classdef cif
             elseif isfield(obj.Data,'space_group_IT_number')
                 groupNum = obj.Data.space_group_IT_number;
             elseif isfield(obj.LatticeInfo,'Name') % use given name
-                system = 'Triclinic';
-                letter = [''];
+                system = '';
+                letter = '';
                 groupNum = nan;
+                name = obj.LatticeInfo.Name;
+                warning('Reading name from built lattice struct')
             else
                 error('Group number was not found.')
             end
@@ -174,6 +200,8 @@ contains(letter,"C")||contains(letter,"A"), isempty(letter)];
                     system = 'Rhombohedral';
                 case 5 % side centered
                     name = 'Side Centered';
+                case 6 % is empty
+
                 otherwise
                     name = '';
                     warning('No Group number found.')
@@ -183,6 +211,8 @@ contains(letter,"C")||contains(letter,"A"), isempty(letter)];
             if isempty(name)
                 latName = system;
             elseif contains(['BCC','FCC'],name)
+                latName = name;
+            elseif isempty(system)
                 latName = name;
             else
                 latName = [name ' ' system];
@@ -203,20 +233,20 @@ table(data.atom_site_label,data.atom_site_type_symbol, ...
             arguments
                 obj
                 rkSpace {mustBeMember(rkSpace,{'real','reciprocal'})}= 'real'
-                cellType {mustBeMember(cellType,{'conventional','primitive','brillouin'})}= 'conventional'
+                cellType {mustBeMember(cellType,{'conventional','primitive','brillouin','wigner-seitz'})}= 'conventional'
             end
             % returns a struct with vertices and faces for the cell
 
             switch rkSpace % choose bewtween cell in r or k - space
                 case 'real'
-                    if (contains(obj.LatticeInfo.Name,'Centered')|| ...
-                            contains(obj.bravais,'Centered')) &&...
+                    if (contains(obj.LatticeInfo.Name,{'Centered','FCC','BCC'})|| ...
+                            contains(obj.bravais,{'Centered','FCC','BCC'})) &&...
                         contains(cellType,'conventional')
                         verts = [0 0 0;
                             1 1 1;
                             perms([1 0 0]);
                             perms([1 1 0])].*obj.lengths;
-                    elseif contains(cellType,'brillouin')
+                    elseif contains(cellType,'brillouin') || contains(cellType,'wigner-seitz')
                         verts = wignerSeitz3D(obj.LatticeInfo.Real,[0 0 0], ...
                             'Output','struct','Method','voronoi');
                         verts = verts.vertices;

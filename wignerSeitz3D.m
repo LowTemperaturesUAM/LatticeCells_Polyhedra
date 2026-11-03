@@ -22,9 +22,10 @@ flag2D = false;
 
 % If there are many lattice points, it is faster to triangulate. If 2D,
 % avoid Intersection
-if length(Points) > 50 || size(Points,2)<3
+
+if (length(Points) > 50 || size(Points,2)<3) && ~strcmp(opts.Method,'voronoi')
     opts.Method = 'voronoi';
-    warning('Switching calculation method to Voronoi teselation')
+    warning('wignerSeitz3D: Switching calculation method to Voronoi teselation')
 end
 
 for nCenter = 1:size(center,1)
@@ -125,11 +126,6 @@ for nCenter = 1:size(center,1)
 
 end
 
-if nCenter == 1 % Remove cell structure if there is only 1
-    Vertices = Vertices{1};
-    Faces = Faces{1};
-end
-
     if contains(opts.Output,'struct')
         C = tab10(nCenter);
         for n = 1:nCenter
@@ -139,10 +135,16 @@ end
 
             outStruct(n).UserData.rAtom = center(n,:);% save the atom position
         end
+
         % Replace first output by struct, and the second by the volumes
         Vertices = outStruct;
         Faces = Vol;
         Vol = [];
+    end
+
+    if nCenter == 1 && ~contains(opts.Output,'struct')% Remove cell structure if there is only 1
+        Vertices = Vertices{1};
+        Faces = Faces{1};
     end
 
 end

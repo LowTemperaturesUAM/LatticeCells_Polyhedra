@@ -29,7 +29,7 @@ bravaisShortList = {'cP'
 
 switch class(bravais)
     case 'double'
-        warning('Only Lattice Systems are known (simple or primitive).')
+        warning('Could only get Lattice System (simple or primitive).')
         if bravais > 194 && bravais <= 230
             bravais = 'Cubic';
         elseif bravais > 167

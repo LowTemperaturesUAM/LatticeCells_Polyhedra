@@ -4,7 +4,7 @@ arguments
     normal (1,3) double
     offset (1,:) double = 0
 end
-%  [newP3D,newP2D] = projectToPlane(points3D,n) projects 3D points 
+%  [newP3D,newP2D] = projectToPlane(points3D,n,offset) projects 3D points 
 %  into a plane perpendicular to n through the origin. It gives the 
 %  coordinates of the projected points in the original 3D coordinates and 
 % in 2D coordinates of plane. Third output will be struct with chosen 2D
